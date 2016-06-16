@@ -30,7 +30,7 @@ class SecurityGroupCheck(unittest.TestCase):
         print resp
         self.assertEqual(200, resp['Status'])
 
-    def test_create_numeric_name_description_security_group(self)
+    def test_create_numeric_name_description_security_group(self) :
 
         resp = self.jclient.vpc.create_security_group(group_name = '1', group_description = 'ok', vpc_id = self.vpc_id)
         print resp
