@@ -2,6 +2,8 @@ from jcsclient import client
 from jcsclient import clilib
 import unittest
 import logging
+import time
+import utils
 
 ### Usage info
 ### Make sure you have sorced openrc and
@@ -43,7 +45,7 @@ class SanityTest(unittest.TestCase):
         pass
 
     def test_create_vpc(self):
-        resp = self.jclient.vpc.create_vpc(cidr_block='192.168.0.0/24')
+        resp = self.jclient.vpc.create_vpc(cidr_block='122.16.0.0/24')
         logging.info(resp)
         self.assertEqual(200, resp['status'])
         self.__class__.vpcId = resp['CreateVpcResponse']['vpc']['vpcId']
@@ -51,7 +53,7 @@ class SanityTest(unittest.TestCase):
 
     def test_create_subnet(self):
         if self.__class__.vpcId:
-            resp = self.jclient.vpc.create_subnet(vpc_id = self.vpcId, cidr_block='192.168.0.64/26')
+            resp = self.jclient.vpc.create_subnet(vpc_id = self.vpcId, cidr_block='122.16.0.64/26')
             logging.info(resp)
             self.assertEqual(200, resp['status'])
             self.__class__.subnetId = resp['CreateSubnetResponse']['subnet']['subnetId']
@@ -181,9 +183,30 @@ class SanityTest(unittest.TestCase):
             if image['name'] == "Ubuntu 14.04":
                 imageId = image['imageId']
         resp = self.jclient.compute.run_instances(subnet_id=self.subnetId, image_id = imageId , instance_type_id = 'c1.small')
+        logging.info(resp)
+
+
         self.assertEqual(200, resp['status'])
         self.__class__.instanceId = resp['RunInstancesResponse']['instancesSet']['item']['instanceId']
     
+
+        start_time = time.time()
+        while True:
+            resp = self.jclient.compute.describe_instances(instance_ids=self.__class__.instanceId)
+            logging.info(resp)
+
+            state = resp['DescribeInstancesResponse'][ 'instancesSet'][ 'item']
+            state = resp['DescribeInstancesResponse'][ 'instancesSet'][ 'item'][ 'instanceState']
+
+            if state =='running':
+                #logger and logger.info(resp)
+                break
+            if (time.time() - start_time) >= 300:
+                #logger and logger.error(resp)
+                logging.error('Instance in pending state')
+                break
+
+
 
     def test_terminate_instance(self):
         if self.__class__.instanceId :
