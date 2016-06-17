@@ -1,0 +1,143 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#echo "show info;show stat" | sudo nc -U /var/run/haproxy.sock
+#watch -n .000001 'sudo python haproxy.py'
+#
+import logging
+import socket
+import select
+import sys
+import socket
+import string
+from pprint import pprint
+
+from time import time
+from traceback import format_exc
+ 
+logger = logging.getLogger(__name__)
+ 
+class TimeoutException(Exception): 
+    pass 
+
+class HAProxyStats(object):
+    """ Used for communicating with HAProxy through its local UNIX socket interface.
+    """
+    def __init__(self, socket_name=None):
+        self.socket_name = socket_name
+ 
+    def execute(self, command, timeout=200):
+        """ Executes a HAProxy command by sending a message to a HAProxy's local
+        UNIX socket and waiting up to 'timeout' milliseconds for the response.
+        """
+        
+        buffer = ""
+ 
+        client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        client.connect(self.socket_name)
+
+        client.send(command + "\n")
+
+        running = True
+        while(running):
+            r, w, e = select.select([client,],[],[], timeout)
+
+            if not (r or w or e):
+                raise TimeoutException()
+    
+            for s in r:
+                if (s is client):
+                    buffer = buffer + client.recv(16384)
+                    running = (len(buffer)==0)
+                                        
+        client.close()
+
+        return (buffer.decode('utf-8').split('\n'))
+
+
+###############
+
+def get_stat():
+    stats = HAProxyStats('/var/run/haproxy.sock')
+    #print stats.execute('show info')
+    result = stats.execute('show stat')
+    headers = result[0]
+    headers_list = headers.split(",")
+    #print headers_list
+    result_dict = {}
+    for line in result[1:]:
+        line_list = line.split(",")
+        line_dict = dict(zip(headers_list, line_list))
+        #print line_dict.get("# pxname")
+        if result_dict.has_key(line_dict.get("# pxname")):
+            result_dict.get(line_dict.get("# pxname")).append(line_dict)
+        else:
+            result_dict[line_dict.get("# pxname")] = [line_dict]
+    return result_dict
+    #print result_dict.keys()
+    #[u'nova-ec2', u'', u'metadata', u'nova', u'ec2-api', u'api', u'lb-stats', 
+    #u'novncproxy', u'glance', u'glance-registry', u'neutron', u'discovery']
+
+
+def get_sel_stat(result_dict):
+    result = {}
+    for pxname, stat in result_dict.items():
+        #print pxname
+        res_dict = {}
+        result[pxname] = []
+        for st in stat:
+            #print st.get("svname")
+            service_dict = {}
+            service_dict["current_sessions"] = st.get("scur")
+            service_dict["max_sessions"] = st.get("smax")
+            service_dict["configured_session_limit"] = st.get("slim")
+            service_dict["number_of_sessions_per_second"] = st.get("rate")
+            service_dict["configured_limit_on_new_sessions_per_second"] = st.get("rate_lim")
+            service_dict["max_number_of_new_sessions_per_second"] = st.get("rate_max")
+            service_dict["HTTP requests per second"] = st.get("req_rate")
+            service_dict["max number of HTTP requests per second"] = st.get("req_rate_max")
+            service_dict["max_number_of_new_sessions_per_second"] = st.get("rate_max")
+            service_dict["number_of_data_transfers_aborted_by_the_client"] = st.get("cli_abrt")
+            service_dict["number_of_data_transfers_aborted_by_the_server"] = st.get("srv_abrt")
+            service_dict["http_responses_with_1xx_code"] = st.get("hrsp_1xx")
+            service_dict["http_responses_with_2xx_code"] = st.get("hrsp_2xx")
+            service_dict["http_responses_with_3xx_code"] = st.get("hrsp_3xx")
+            service_dict["http_responses_with_4xx_code"] = st.get("hrsp_4xx")
+            service_dict["http_responses_with_5xx_code"] = st.get("hrsp_5xx")
+            service_dict["http_responses_with_other_codes"] = st.get("hrsp_other")
+            res_dict[st.get("svname")] = service_dict
+        result[pxname].append(res_dict)
+    #print pprint(result)
+    return result
+
+def get_metrics(name):
+    result_dict = get_stat()
+    sel_stat = get_sel_stat(result_dict)
+    if name == "all":
+        pprint(sel_stat)
+    else:
+        pprint(sel_stat[name])
+
+#pprint(sel_stat["neutron"])
+
+def usage():
+    print """\nUsage:
+            ./haproxy_metrics neutron \n
+            ./haproxy_metrics api \n
+            ./haproxy_metrics ec2-api \n
+            ./haproxy_metrics all \n"""
+
+if __name__ == "__main__":
+    name = None
+    try:
+        name = sys.argv[1]
+    except IndexError as ex:
+        pass
+
+    if not name:
+        usage()
+    else:
+        get_metrics(name)
+        
+
+
+
