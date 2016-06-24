@@ -74,6 +74,7 @@ class SanityTest(unittest.TestCase):
 
     def test_delete_subnet(self):
         if self.__class__.subnetId :
+            time.sleep(5)
             resp = self.jclient.vpc.delete_subnet(subnet_id=self.subnetId)
             logging.info(resp)
             self.assertEqual(200, resp['status'])
