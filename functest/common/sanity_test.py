@@ -4,6 +4,7 @@ import unittest
 import logging
 import time
 import utils
+import sys
 
 ### Usage info
 ### Make sure you have sorced openrc and
@@ -45,7 +46,7 @@ class SanityTest(unittest.TestCase):
         pass
 
     def test_create_vpc(self):
-        resp = self.jclient.vpc.create_vpc(cidr_block='125.16.0.0/24')
+        resp = self.jclient.vpc.create_vpc(cidr_block='125.16.0.0/11')
         logging.info(resp)
         self.assertEqual(200, resp['status'])
         self.__class__.vpcId = resp['CreateVpcResponse']['vpc']['vpcId']
@@ -360,4 +361,6 @@ if __name__ == '__main__':
     test.addTest(SanityTest("test_delete_security_group"))
     test.addTest(SanityTest("test_delete_subnet"))
     test.addTest(SanityTest('test_delete_vpc'))
-    unittest.TextTestRunner(verbosity=2).run(test)
+    ret = not unittest.TextTestRunner(verbosity=2).run(test).wasSuccessful()
+    # ret = not runner.run(suite).wasSuccessful()
+    sys.exit(ret)
