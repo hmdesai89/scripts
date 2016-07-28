@@ -206,6 +206,8 @@ class SanityTest(unittest.TestCase):
             if (time.time() - start_time) >= 300:
                 #logger and logger.error(resp)
                 logging.error('Instance in pending state')
+                self.fail('Instance stuck in pending state')
+
                 break
 
 
