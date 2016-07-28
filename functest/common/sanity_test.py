@@ -4,6 +4,7 @@ import unittest
 import logging
 import time
 import utils
+import sys
 
 ### Usage info
 ### Make sure you have sorced openrc and
@@ -205,6 +206,8 @@ class SanityTest(unittest.TestCase):
             if (time.time() - start_time) >= 300:
                 #logger and logger.error(resp)
                 logging.error('Instance in pending state')
+                self.fail('Instance stuck in pending state')
+
                 break
 
 
@@ -360,4 +363,6 @@ if __name__ == '__main__':
     test.addTest(SanityTest("test_delete_security_group"))
     test.addTest(SanityTest("test_delete_subnet"))
     test.addTest(SanityTest('test_delete_vpc'))
-    unittest.TextTestRunner(verbosity=2).run(test)
+    ret = not unittest.TextTestRunner(verbosity=2).run(test).wasSuccessful()
+    # ret = not runner.run(suite).wasSuccessful()
+    sys.exit(ret)
