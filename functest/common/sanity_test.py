@@ -46,7 +46,7 @@ class SanityTest(unittest.TestCase):
         pass
 
     def test_create_vpc(self):
-        resp = self.jclient.vpc.create_vpc(cidr_block='125.16.0.0/11')
+        resp = self.jclient.vpc.create_vpc(cidr_block='125.16.0.0/24')
         logging.info(resp)
         self.assertEqual(200, resp['status'])
         self.__class__.vpcId = resp['CreateVpcResponse']['vpc']['vpcId']
