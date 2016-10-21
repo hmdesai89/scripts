@@ -18,7 +18,7 @@ logging.basicConfig(filename=LOG_FILENAME,
 def get_logs(date, env):
     if not os.path.exists(date+'_'+env):
         os.makedirs(date+'_'+env)
-    #VF.Controlgetlogs(env, 'all', date+'_'+env, None, None, date)
+    VF.Controlgetlogs(env, 'all', date+'_'+env, None, None, date)
     VF.EC2getlogs(env, 'all', date+'_'+env, None, None, date)
 
 def put_logs(directory,bucket, jclient):
